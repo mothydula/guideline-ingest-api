@@ -1,0 +1,26 @@
+"""
+URL configuration for the guideline ingest project.
+"""
+from django.contrib import admin
+from django.urls import path, include
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+# Main project URLs
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include('jobs.urls')),
+    # OpenAPI schema
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+]
+
+# jobs/urls.py
+from django.urls import path
+from . import views
+
+app_name = 'jobs'
+
+urlpatterns = [
+    path('jobs/', views.create_job, name='create_job'),
+    path('jobs/<uuid:event_id>/', views.get_job_status, name='get_job_status'),
+]
