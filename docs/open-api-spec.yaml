@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: Guideline Ingest API
+  version: 1.0.0
+  description: A backend API for processing guideline documents with GPT chains
+paths:
+  /api/jobs/:
+    post:
+      operationId: jobs_create
+      description: Creates a new job to process guideline text through GPT chain analysis
+      summary: Create a new guideline ingest job
+      tags:
+      - jobs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCreateResponse'
+          description: Job created successfully
+        '400':
+          description: Invalid request data
+  /api/jobs/{event_id}/:
+    get:
+      operationId: jobs_retrieve
+      description: Retrieves the current status and results (if available) for a job
+      summary: Get job status and results
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - jobs
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+          description: Job status retrieved successfully
+        '404':
+          description: Job not found
+components:
+  schemas:
+    JobCreate:
+      type: object
+      description: Serializer for creating new jobs.
+      properties:
+        guideline_text:
+          type: string
+          description: The guideline text to process (max 50,000 characters)
+          maxLength: 50000
+      required:
+      - guideline_text
+    JobCreateResponse:
+      type: object
+      description: Serializer for job creation response.
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the created job
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          description: |-
+            Current status of the job
+
+            * `pending` - Pending
+            * `processing` - Processing
+            * `completed` - Completed
+            * `failed` - Failed
+      required:
+      - event_id
+      - status
+    JobResult:
+      type: object
+      description: Serializer for job result data.
+      properties:
+        summary:
+          type: string
+          description: Summary of the guideline text
+        checklist:
+          type: object
+          additionalProperties: {}
+          description: Generated checklist based on the guidelines
+      required:
+      - checklist
+      - summary
+    JobStatusResponse:
+      type: object
+      description: Serializer for job status response.
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the job
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          description: |-
+            Current status of the job
+
+            * `pending` - Pending
+            * `processing` - Processing
+            * `completed` - Completed
+            * `failed` - Failed
+        result:
+          allOf:
+          - $ref: '#/components/schemas/JobResult'
+          nullable: true
+          description: Job result data (only present when status is 'completed')
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if job failed
+        created_at:
+          type: string
+          format: date-time
+          description: When the job was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the job was last updated
+      required:
+      - created_at
+      - event_id
+      - status
+      - updated_at
+    StatusEnum:
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `processing` - Processing
+        * `completed` - Completed
+        * `failed` - Failed
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
