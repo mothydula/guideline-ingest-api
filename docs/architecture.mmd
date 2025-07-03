@@ -1,0 +1,87 @@
+# Create moderately detailed architecture diagram
+cat > docs/architecture.md << 'EOF'
+# System Architecture
+
+## Overview
+Architecture showing the key components and data flow for the Guideline Ingest API with proper separation of concerns.
+
+```mermaid
+graph TB
+    %% Client Layer
+    Client[🌐 Client Application]
+    
+    %% API Gateway
+    Gateway[🚪 API Gateway]
+    
+    %% Django Application
+    subgraph "🐍 Django API Server"
+        Views[🎯 API Views]
+        Models[🗃️ Django Models]
+        Serializers[📝 DRF Serializers]
+    end
+    
+    %% Queue System
+    subgraph "📬 Job Queue"
+        Redis[(🔴 Redis Queue)]
+        Worker1[⚙️ Celery Worker 1]
+        Worker2[⚙️ Celery Worker 2]
+    end
+    
+    %% AI Processing
+    subgraph "🤖 AI Processing"
+        GPTSummarizer[📝 Text Summarizer]
+        ChecklistGen[✅ Checklist Generator]
+    end
+    
+    %% External Services
+    OpenAI[🔮 OpenAI API]
+    
+    %% Database
+    Database[(💾 PostgreSQL)]
+    
+    %% Documentation
+    Swagger[📚 API Docs]
+    
+    %% Request Flow
+    Client -->|POST guideline| Gateway
+    Gateway --> Views
+    Views --> Serializers
+    Serializers --> Models
+    Models --> Database
+    Views -->|Queue task| Redis
+    Views -->|Return event_id <200ms| Client
+    
+    %% Background Processing
+    Redis --> Worker1
+    Redis --> Worker2
+    Worker1 --> GPTSummarizer
+    Worker2 --> GPTSummarizer
+    GPTSummarizer -->|API call| OpenAI
+    OpenAI --> ChecklistGen
+    ChecklistGen -->|Save results| Models
+    
+    %% Status Check
+    Client -->|GET status| Gateway
+    Gateway --> Views
+    Views -->|Query DB| Database
+    Views -->|Return results| Client
+    
+    %% Documentation
+    Views --> Swagger
+    
+    %% Styling
+    classDef client fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef api fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef queue fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef ai fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef db fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef docs fill:#fafafa,stroke:#616161,stroke-width:2px
+    
+    class Client client
+    class Gateway,Views,Models,Serializers api
+    class Redis,Worker1,Worker2 queue
+    class GPTSummarizer,ChecklistGen ai
+    class OpenAI external
+    class Database db
+    class Swagger docs
